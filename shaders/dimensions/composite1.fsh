@@ -19,7 +19,7 @@
 #include "/lib/res_params.glsl"
 
 #define diagonal3_old(m) vec3((m)[0].x, (m)[1].y, m[2].z)
-#define  projMAD_old(m, v) (diagonal3_old(m) * (v) + (m)[3].xyz)
+#define projMAD_old(m, v) (diagonal3_old(m) * (v) + (m)[3].xyz)
 
 const bool colortex5MipmapEnabled = true;
 uniform float nightVision;
@@ -206,6 +206,8 @@ float convertHandDepth_2(in float depth, bool hand) {
 	#include "/lib/hsv.glsl"
 	#include "/lib/lpv_common.glsl"
 	#include "/lib/lpv_render.glsl"
+	#include "/lib/blocks.glsl"
+	#include "/lib/lpv_blocks.glsl"
 #endif
 
 #define DEFERRED_SPECULAR
