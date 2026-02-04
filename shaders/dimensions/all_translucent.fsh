@@ -213,6 +213,14 @@ uniform vec3 relativeEyePosition;
 #include "/lib/lpv_buffer.glsl"
 
 #include "/lib/specular.glsl"
+#if defined VIVECRAFT
+	uniform bool vivecraftIsVR;
+	uniform vec3 vivecraftRelativeMainHandPos;
+	uniform vec3 vivecraftRelativeOffHandPos;
+	uniform mat4 vivecraftRelativeMainHandRot;
+	uniform mat4 vivecraftRelativeOffHandRot;
+#endif
+
 #include "/lib/diffuse_lighting.glsl"
 
 #if defined PHYSICSMOD_OCEAN_SHADER
@@ -878,8 +886,8 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 //////////////////////////////// SPECULARS /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-
 	vec3 SpecularTex = texture(specular, lmtexcoord.xy, mipmapBias).rga;
+	
 ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// DIFFUSE LIGHTING //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

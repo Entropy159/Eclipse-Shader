@@ -229,6 +229,13 @@ uniform vec3 relativeEyePosition;
 #define FULLRESDEPTH
 
 #include "/lib/specular.glsl"
+#if defined VIVECRAFT
+	uniform bool vivecraftIsVR;
+	uniform vec3 vivecraftRelativeMainHandPos;
+	uniform vec3 vivecraftRelativeOffHandPos;
+	uniform mat4 vivecraftRelativeMainHandRot;
+	uniform mat4 vivecraftRelativeOffHandRot;
+#endif
 #include "/lib/diffuse_lighting.glsl"
 
 #include "/lib/end_fog.glsl"
@@ -741,7 +748,7 @@ vec3 ComputeShadowMap_COLOR(in vec3 projectedShadowPosition, float distortFactor
 		}
 	#endif
 
-	#ifdef debug_SHADOWMAP
+	#if DEBUG_VIEW == debug_SHADOWMAP
 		shadowDebug = texture(shadow, projectedShadowPosition).x;
 	#endif
 	// #ifdef TRANSLUCENT_COLORED_SHADOWS
@@ -851,6 +858,7 @@ uniform float wetness;
 					puddles = clamp(halfWet - exp(-25.0 * puddles*puddles*puddles*puddles*puddles*Puddle_Size),0.0,1.0);
 
 					float wetnessStages = max(puddles, fullWet) * lightmap;
+					float wetnessDarkening = max(puddles, fullWet*0.5) * lightmap;
 				#endif
 
 				#if PUDDLE_MODE == 2
@@ -858,11 +866,13 @@ uniform float wetness;
 					puddles = clamp(halfWet - exp(-25.0 * puddles*puddles*puddles*puddles*puddles*Puddle_Size),0.0,1.0);
 
 					float wetnessStages = puddles * lightmap;
+					float wetnessDarkening = wetnessStages;
 				#endif
 
 				#if PUDDLE_MODE == 3
 					float puddles = 0.0;
 					float wetnessStages = fullWet * lightmap;
+					float wetnessDarkening = wetnessStages*0.5;
 				#endif				
 
 				wetnessStages *= effectStrength;
@@ -883,15 +893,15 @@ uniform float wetness;
 							rippleNormal = mix(flatNormals, ripple, smoothstep(35., 10., viewDist) * rainStrength * smoothstep(0.0, 1.0, rippleAmount));
 						}
 
-						normals = mix(normals, rippleNormal, puddles * effectStrength * clamp(flatNormals.y,0.0,1.0));
+						normals = mix(normals, rippleNormal, wetnessStages * clamp(flatNormals.y,0.0,1.0));
 					#else
-						normals = mix(normals, flatNormals, puddles * effectStrength * clamp(flatNormals.y,0.0,1.0));
+						normals = mix(normals, flatNormals, wetnessStages * clamp(flatNormals.y,0.0,1.0));
 					#endif
 				}
 
 				roughness = mix(roughness, 0.5*(1.0+snowR), wetnessStages * Puddle_Reflection_Sharpness);
 
-				if(f0 < 229.5/255.0 ) albedo = pow(albedo * (1.0 - 0.08*wetnessStages), vec3(1.0 + 0.7*wetnessStages));
+				if(f0 < 229.5/255.0 ) albedo = pow(albedo * (1.0 - 0.08*wetnessDarkening), vec3(1.0 + 0.7*wetnessDarkening));
 			}
 		#endif
 
@@ -1640,15 +1650,17 @@ void main() {
 				// vec3 orbitstar = vec3(feetPlayerPos_normalized.x,abs(feetPlayerPos_normalized.y),feetPlayerPos_normalized.z); orbitstar.x -= WsunVec.x*0.2;
 				vec3 worldDir = normalize(mat3(gbufferModelViewInverse) * toScreenSpace(vec3(texcoord/RENDER_SCALE,1.0)));
 
-				vec3 orbitstar = customRotation(sunPathRotation, worldTimeSmooth) * worldDir;
+				#if RESOURCEPACK_SKY == 0 || RESOURCEPACK_SKY == 3
+					vec3 orbitstar = customRotation(sunPathRotation, worldTimeSmooth) * worldDir;
 
-				vec3 starColor = vec3(1.0);
-				#if defined OVERWORLD_SHADER && defined TWILIGHT_FOREST_FLAG
-					float stars = stars(orbitstar, starColor) * 100.0;
-					Background += stars * starColor;
-  				#else
-					float stars = stars(orbitstar, starColor) * 10.0;
-					Background += stars * starColor * mix(clamp(-unsigned_WsunVec.y*2.0,0.0,1.0), 1.0, clamp(cameraPosition.y-15000.0, 0.0, 45000.0)/45000.0);
+					vec3 starColor = vec3(1.0);
+					#if defined OVERWORLD_SHADER && defined TWILIGHT_FOREST_FLAG
+						float stars = stars(orbitstar, starColor) * 100.0;
+						Background += stars * starColor;
+					#else
+						float stars = stars(orbitstar, starColor) * 10.0;
+						Background += stars * starColor * mix(clamp(-unsigned_WsunVec.y*2.0,0.0,1.0), 1.0, clamp(cameraPosition.y-15000.0, 0.0, 45000.0)/45000.0);
+					#endif
 				#endif
 
 				#if !defined AMBIENT_LIGHT_ONLY && (RESOURCEPACK_SKY == 1 || RESOURCEPACK_SKY == 0)
@@ -1790,18 +1802,8 @@ void main() {
 	if(translucentMasks > 0.0 && !hand){
 		// water absorbtion will impact ALL light coming up from terrain underwater.
 		gl_FragData[0].rgb *= Absorbtion;
-
-		// #if defined DISTANT_HORIZONS || defined VOXY
-	  	// 	float DH_mixedLinearZ = sqrt(texelFetch(colortex12,ivec2(gl_FragCoord.xy),0).a/65000.0);
-		// 	vec4 vlBehingTranslucents = BilateralUpscale_VLFOG(colortex13, colortex12, DH_mixedLinearZ);
-		// #else
-		// 	vec4 vlBehingTranslucents = BilateralUpscale_VLFOG(colortex13, depthtex1, ld(z));
-		// #endif
-
-    	// gl_FragData[0].rgb = gl_FragData[0].rgb * vlBehingTranslucents.a + vlBehingTranslucents.rgb;
 	}
 
-	
 	////// DEBUG VIEW STUFF
 	#if DEBUG_VIEW == debug_SHADOWMAP	
 		gl_FragData[0].rgb = vec3(1.0) * (Shadows * NdotL * 0.9 + 0.1);
