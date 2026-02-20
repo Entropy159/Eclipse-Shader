@@ -267,6 +267,7 @@ vec3 getParallaxDisplacement(vec3 waterPos, vec3 playerPos) {
 
 	float largeWaves = texture(noisetex, waterPos.xy / 600.0 ).b;
 	float largeWavesCurved = pow(1.0-pow(1.0-largeWaves,2.5),4.5);
+	largeWavesCurved = mix(1.0-largeWavesCurved, largeWavesCurved, PATCHY_WAVE_BLEND);
 
 	float waterHeight = getWaterHeightmap(waterPos.xy, largeWaves, largeWavesCurved);
 	// waterHeight = exp(-20.0*sqrt(waterHeight));
@@ -375,7 +376,7 @@ float ComputeShadowMap(inout vec3 directLightColor, vec3 playerPos, float maxDis
 			vec3 projectedShadowPosition = mat3(shadowModelView) * playerPos + shadowModelView[3].xyz;
 		#endif
 
-		applyShadowBias(projectedShadowPosition, playerPos, geoNormals, 0.0);
+		applyShadowBias(projectedShadowPosition, playerPos, geoNormals);
 
 		projectedShadowPosition = diagonal3(shadowProjection) * projectedShadowPosition + shadowProjection[3].xyz;
 
@@ -394,7 +395,7 @@ float ComputeShadowMap(inout vec3 directLightColor, vec3 playerPos, float maxDis
 
 	#if defined END_ISLAND_LIGHT && defined END_SHADER
 		vec4 shadowPos = customShadowMatrixSSBO * vec4(playerPos, 1.0);
-		applyShadowBias(shadowPos.xyz, playerPos, geoNormals, 0.0);
+		applyShadowBias(shadowPos.xyz, playerPos, geoNormals);
 		shadowPos =  customShadowPerspectiveSSBO * shadowPos;
 		vec3 projectedShadowPosition = shadowPos.xyz / shadowPos.w;
 	#endif
@@ -410,9 +411,9 @@ float ComputeShadowMap(inout vec3 directLightColor, vec3 playerPos, float maxDis
 	#ifdef BASIC_SHADOW_FILTER
 		int samples = int(SHADOW_FILTER_SAMPLE_COUNT * 0.5);
 		#ifdef END_SHADER
-			float rdMul = (4.0*distortFactor*d0*k/shadowMapResolution) * 13.0;
+			float rdMul = 52.0*distortFactor*d0k;
 		#else
-			float rdMul = (4.0*distortFactor*d0*k/shadowMapResolution) * 0.6;
+			float rdMul = 2.4*distortFactor*d0k;
 		#endif
 
 		for(int i = 0; i < samples; i++){
